@@ -1,6 +1,6 @@
 {
   "name": "freeswitch-esl",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "FreeSWITCH ESL Node.js Implementation",
   "author": "Chad Engler <chad@pantherdev.com>",
   "keywords": [
@@ -12,7 +12,7 @@
     "socket",
     "library"
   ],
-  "main": "lib/index",
+  "main": "__build__/src/index",
   "typings": "__build__/src/index.d.ts",
   "homepage": "https://github.com/englercj/node-esl",
   "bugs": "https://github.com/englercj/node-esl/issues",
