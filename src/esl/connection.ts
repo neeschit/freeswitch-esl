@@ -44,14 +44,16 @@ export class Connection extends EventEmitter2 {
     authed: boolean;
     usingFilters: boolean;
     channelData: any;
-    cmdCallbackQueue: Function[];
-    apiCallbackQueue: Function[];
     reqEvents: string[];
     listeningEvents: string[];
     _inbound: boolean;
-    password: string;
-    socket: net.Socket;
-    parser: Parser;
+    private password: string;
+    private host: string;
+    private port: number;
+    private socket: net.Socket;
+    private parser: Parser;
+    private cmdCallbackQueue: Function[];
+    private apiCallbackQueue: Function[];
 
     constructor() {
         super({
@@ -61,11 +63,58 @@ export class Connection extends EventEmitter2 {
         });
     }
 
-    initialize(...args: any[]) {
-        const len = arguments.length, self = this;
+    initializeInbound(config: InboundSocketConfig) {
+        if (!config.host || !config.password) {
+            this.emit('error', new Error('Bad arguments passed to esl.Connection'));
+        }
+        
+        this.init(config.callback);
 
+        this._inbound = true;
+        this.password = config.password;
+        this.host = config.host;
+        this.port = config.port;
+
+        //set inbound to true
+        this._inbound = true;
+
+        this.createInboundSocket();
+    }
+    
+    initializeOutbound(config: OutboundSocketConfig) {
+        if (!config.socket) {
+            this.emit('error', new Error('Bad arguments passed to esl.Connection'));
+            return;
+        }
+
+        this.init(config.callback);
+
+        const self = this;
+
+        this._inbound = false;
+
+        this.socket = config.socket;
+        this.connecting = false;
+        this._onConnect();
+
+        this.send('connect');
+
+        this.once('esl::event::CHANNEL_DATA::**', function () {
+            self.subscribe(self.reqEvents, function () {
+                self.emit('esl::ready');
+            });
+        });
+
+        this.socket.on('error', this._onError.bind(this));
+
+        this.onInit();
+    }
+
+    private init(callback?: () => any) {
         //check if they passed a ready callback
-        this.once('esl::ready', ((typeof arguments[len - 1] === 'function') ? arguments[len - 1] : this._noop));
+        if (callback && typeof callback === 'function') {
+            this.once('esl::ready', callback);
+        }
 
         //reasonable defaults for values
         this.execAsync = false;
@@ -79,46 +128,12 @@ export class Connection extends EventEmitter2 {
         //events required for the module to operate properly
         this.reqEvents = ['BACKGROUND_JOB', 'CHANNEL_EXECUTE_COMPLETE'];
         this.listeningEvents = [];
+    }
 
-        //"Inbound" connection (going into FSW)
-        if (len === 3 || len === 4) { //3 (host, port, password); 4 (host, port, password, callback)
-            //set inbound to true
-            this._inbound = true;
+    private onInit() {
+        const self = this;
 
-            //save password
-            this.password = arguments[2];
-
-            //connect to ESL Socket
-            this.socket = net.connect({
-                port: arguments[1],
-                host: arguments[0]
-            }, this._onConnect.bind(this));
-
-            this.socket.on('error', this._onError.bind(this));
-        }
-        //"Outbound" connection (coming from FSW)
-        else if (len >= 1) { //1 (net.Socket); 2 (net.Socket, callback)
-            //set inbound to false
-            this._inbound = false;
-
-            this.socket = arguments[0];
-            this.connecting = false;
-            this._onConnect();
-
-            this.send('connect');
-
-            this.once('esl::event::CHANNEL_DATA::**', function () {
-                self.subscribe(self.reqEvents, function () {
-                    self.emit('esl::ready');
-                });
-            });
-
-            this.socket.on('error', this._onError.bind(this));
-        }
-        //Invalid arguments passed
-        else { //0 args, or more than 4
-            this.emit('error', new Error('Bad arguments passed to esl.Connection'));
-        }
+        this.socket.on('error', this._onError.bind(this));
 
         //emit end when stream closes
         this.socket.on('end', function () {
@@ -152,6 +167,24 @@ export class Connection extends EventEmitter2 {
         });
     }
 
+    private createInboundSocket() {
+        //connect to ESL Socket
+        this.socket = net.connect({
+            port: this.port,
+            host: this.host
+        }, this._onConnect.bind(this));
+
+        this.onInit();
+    }
+
+    reconnect(callback?: () => any) {
+        if (!this._inbound) {
+            throw new Error('cannot reconnect on outbound sockets as connection is initiated from freeswitch')
+        }
+        this.init(callback);
+
+        this.createInboundSocket();
+    }
 
 
     /*********************
@@ -166,12 +199,12 @@ export class Connection extends EventEmitter2 {
         if (this._inbound) return null;
 
         return this.socket;
-    };
+    }
 
     //Test if the connection object is connected. Returns `true` if connected, `false` otherwise.
     connected() {
         return (!this.connecting && !!this.socket);
-    };
+    }
 
     //When FS connects to an "Event Socket Outbound" handler, it sends
     // a "CHANNEL_DATA" event as the first event after the initial connection.
@@ -180,7 +213,7 @@ export class Connection extends EventEmitter2 {
     //getInfo() returns NULL when used on an "Event Socket Inbound" connection.
     getInfo() {
         return this.channelData; //remains null on Inbound socket
-    };
+    }
 
     //Sends a command to FreeSWITCH.
     //
@@ -192,6 +225,7 @@ export class Connection extends EventEmitter2 {
     //To automatically wait for the reply event, use sendRecv() instead of send().
     //
     //NOTE: This is a FAF method of sending a command
+
     send(command: string, args?: any) {
         const self = this;
 
@@ -208,7 +242,7 @@ export class Connection extends EventEmitter2 {
         catch (e) {
             self.emit('error', e);
         }
-    };
+    }
 
     //Internally sendRecv($command) calls send($command) then recvEvent(),
     // and returns an instance of ESLevent.
@@ -232,7 +266,7 @@ export class Connection extends EventEmitter2 {
         this.cmdCallbackQueue.push(cb);
 
         this.send(command, args);
-    };
+    }
 
     //Send an API command (http://wiki.freeswitch.org/wiki/Mod_commands#Core_Commands)
     // to the FreeSWITCH server. This method blocks further execution until
@@ -254,7 +288,7 @@ export class Connection extends EventEmitter2 {
         this.apiCallbackQueue.push(cb);
 
         this.send('api ' + command + args);
-    };
+    }
 
     //Send a background API command to the FreeSWITCH server to be executed in
     // it's own thread. This will be executed in it's own thread, and is non-blocking.
@@ -321,12 +355,12 @@ export class Connection extends EventEmitter2 {
         else {
             sendApiCommand(cb);
         }
-    };
+    }
 
     //NOTE: This is a wrapper around sendRecv, that uses an ESLevent for the data
     sendEvent(event: Event, cb: () => any) {
         this.sendRecv('sendevent ' + event.getHeader('Event-Name') + '\n' + event.serialize(), cb);
-    };
+    }
 
     //Returns the next event from FreeSWITCH. If no events are waiting, this
     // call will block until an event arrives.
@@ -342,7 +376,7 @@ export class Connection extends EventEmitter2 {
         cb = cb || this._noop;
 
         this.once('esl::event::**', cb);
-    };
+    }
 
     //Similar to recvEvent(), except that it will block for at most $milliseconds.
     //
@@ -368,13 +402,13 @@ export class Connection extends EventEmitter2 {
 
         //proxy to ensure we pass this timeout to the callback
         self.once('esl::event::**', fn.bind(self, timeout));
-    };
+    }
 
     //See the event socket filter command (http://wiki.freeswitch.org/wiki/Event_Socket#filter).
     filter(header: string, value: string, cb?: () => any) {
         this.usingFilters = true;
         this.sendRecv('filter ' + header + ' ' + value, cb);
-    };
+    }
 
     filterDelete(header: string, value: string, cb?: () => any) {
         if (typeof value === 'function') {
@@ -383,7 +417,7 @@ export class Connection extends EventEmitter2 {
         }
 
         this.sendRecv('filter delete ' + header + (!!value ? ' ' + value : ''), cb);
-    };
+    }
 
     //$event_type can have the value "plain" or "xml" or "json". Any other value specified
     // for $event_type gets replaced with "plain".
@@ -425,7 +459,7 @@ export class Connection extends EventEmitter2 {
         }
 
         this.sendRecv('event ' + type + ' ' + this.listeningEvents.join(' '), cb);
-    };
+    }
 
     //Execute a dialplan application (http://wiki.freeswitch.org/wiki/Mod_dptools#Applications),
     // and wait for a response from the server.
@@ -470,7 +504,7 @@ export class Connection extends EventEmitter2 {
             eventUuid = self._doExec(uuid, 'execute', opts, cb);
         }
         return eventUuid;
-    };
+    }
 
     //Same as execute, but doesn't wait for a response from the server.
     //
@@ -488,7 +522,7 @@ export class Connection extends EventEmitter2 {
         this.execAsync = old;
 
         return eventUuid;
-    };
+    }
 
     //Force async mode on for a socket connection. This command has
     // no effect on outbound socket connections that are set to "async"
@@ -503,7 +537,7 @@ export class Connection extends EventEmitter2 {
     //
     setAsyncExecute(value: boolean) {
         this.execAsync = value;
-    };
+    }
 
     //Force sync mode on for a socket connection. This command has no effect on
     // outbound socket connections that are not set to "async" in the dialplan,
@@ -522,7 +556,7 @@ export class Connection extends EventEmitter2 {
     //      (http://wiki.freeswitch.org/wiki/Event_socket_outbound#Q:_Can_I_bridge_a_call_with_an_Outbound_socket_.3F)
     setEventLock(value: boolean) {
         this.execLock = value;
-    };
+    }
 
     //Close the socket connection to the FreeSWITCH server.
     disconnect() {
@@ -532,7 +566,7 @@ export class Connection extends EventEmitter2 {
             this.socket.end();
             this.socket = null;
         }
-    };
+    }
 
     /*********************
      ** Higher-level Library-Specific Functions
@@ -559,14 +593,14 @@ export class Connection extends EventEmitter2 {
                 if (cb && typeof cb === 'function') cb(new Error('Authentication Failed'), evt);
             }
         });
-    };
+    }
 
     //subscribe to events using json format (native support)
     subscribe(events: any, cb?: () => any) {
         events = events || 'all';
 
         this.events('json', events, cb);
-    };
+    }
 
     //wraps the show mod_commands function and parses the return
     //value into a javascript array
@@ -646,7 +680,7 @@ export class Connection extends EventEmitter2 {
             if (cb) cb(null, parsed, data);
             return;
         });
-    };
+    }
 
     //make an originating call
     originate(options: any, cb?: () => any) {
@@ -671,7 +705,7 @@ export class Connection extends EventEmitter2 {
         } else {
             this.bgapi('originate', arg, cb);
         }
-    };
+    }
 
     //send a SIP MESSAGE
     message(options: any, cb?: () => any) {
@@ -711,14 +745,14 @@ export class Connection extends EventEmitter2 {
         event.addBody(options.body);
 
         this.sendEvent(event, cb);
-    };
+    }
 
 
     /*********************
      ** Private helpers
      **********************/
     //noop because EventEmitter2 makes me pass a function
-    _noop() { };
+    _noop() { }
 
     //helper for execute, sends the actual message
     _doExec(uuid: string, cmd: string, args: any, cb?: Function) {
@@ -747,13 +781,13 @@ export class Connection extends EventEmitter2 {
         this.send('sendmsg ' + uuid, args);
 
         return args['Event-UUID'];
-    };
+    }
 
     //called on socket/generic error, simply echo the error
     //to the user
     _onError(err: Error) {
         this.emit('error', err);
-    };
+    }
 
 
     //called when socket connects to FSW ESL Server
@@ -825,6 +859,18 @@ export class Connection extends EventEmitter2 {
         }
 
         this.emit(emit, event, headers, body);
-    };
+    }
 
+}
+
+export interface InboundSocketConfig {
+    host: string; 
+    port: number; 
+    password: string; 
+    callback?: () => any;
+}
+
+export interface OutboundSocketConfig {
+    socket: net.Socket;
+    callback?: () => any;
 }

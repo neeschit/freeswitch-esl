@@ -13,7 +13,9 @@ describe('esl.Connection', function() {
 
                 serverSocket = server;
                 conn = new Connection();
-                conn.initialize(client);
+                conn.initializeOutbound({
+                    socket: client
+                });
                 done();
             });
         });
@@ -45,7 +47,11 @@ describe('esl.Connection', function() {
                 // no need for the given client, we will set up a new one below.
                 client.end();
                 conn = new Connection();
-                conn.initialize('localhost', server.address().port, 'ClueCon');
+                conn.initializeInbound({
+                    host: 'localhost', 
+                    port: server.address().port, 
+                    password: 'ClueCon'
+                });
                 done();
             });
         });

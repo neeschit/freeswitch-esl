@@ -69,7 +69,9 @@ export class Server extends EventEmitter2 {
         const conn = new Connection(),
             id = this._generateId();
 
-        conn.initialize(socket);
+        conn.initializeOutbound({
+            socket: socket
+        });
 
         this.connections[id] = conn;
         this.connections[id]._id = id;
