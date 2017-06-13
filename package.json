@@ -1,6 +1,6 @@
 {
   "name": "freeswitch-esl",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "FreeSWITCH ESL Node.js Implementation",
   "author": "Chad Engler <chad@pantherdev.com>",
   "keywords": [
@@ -21,17 +21,18 @@
     "url": "https://github.com/englercj/node-esl.git"
   },
   "dependencies": {
-    "eventemitter2": "~4.1.0",
-    "uuid": "^3.0.1",
-    "xml2js": "~0.4"
+    "eventemitter2": "4.1.0",
+    "uuid": "3.0.1",
+    "xml2js": "0.4.17"
   },
   "devDependencies": {
-    "@types/eventemitter2": "^2.2.1",
-    "@types/node": "^7.0.28",
-    "mocha-term-cov-reporter": "~0.2",
-    "chai": "~4.0.2",
-    "sinon": "~2.3.2",
-    "sinon-chai": "~2.10.0"
+    "@types/eventemitter2": "2.2.1",
+    "@types/node": "7.0.29",
+    "mocha-term-cov-reporter": "0.2.3",
+    "mocha": "2.5.3",
+    "chai": "4.0.2",
+    "sinon": "2.3.2",
+    "sinon-chai": "2.10.0"
   },
   "scripts": {
     "test": "mocha --recursive ./test/",

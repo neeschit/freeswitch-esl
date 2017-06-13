@@ -67,7 +67,7 @@ export class Connection extends EventEmitter2 {
         if (!config.host || !config.password) {
             this.emit('error', new Error('Bad arguments passed to esl.Connection'));
         }
-        
+
         this.init(config.callback);
 
         this._inbound = true;
@@ -80,7 +80,7 @@ export class Connection extends EventEmitter2 {
 
         this.createInboundSocket();
     }
-    
+
     initializeOutbound(config: OutboundSocketConfig) {
         if (!config.socket) {
             this.emit('error', new Error('Bad arguments passed to esl.Connection'));
@@ -178,14 +178,24 @@ export class Connection extends EventEmitter2 {
     }
 
     reconnect(callback?: () => any) {
+        if (this.connecting) {
+            return;
+        }
         if (!this._inbound) {
             throw new Error('cannot reconnect on outbound sockets as connection is initiated from freeswitch')
         }
+
         this.init(callback);
 
         this.createInboundSocket();
     }
 
+    private resetSocket() {
+        if (this.socket) {
+            this.socket.end();
+            this.socket = null;
+        }
+    }
 
     /*********************
      ** Lower-level ESL Specification
@@ -203,7 +213,7 @@ export class Connection extends EventEmitter2 {
 
     //Test if the connection object is connected. Returns `true` if connected, `false` otherwise.
     connected() {
-        return (!this.connecting && !!this.socket);
+        return (!this.connecting && !!this.socket && !this.socket.destroyed);
     }
 
     //When FS connects to an "Event Socket Outbound" handler, it sends
@@ -562,10 +572,7 @@ export class Connection extends EventEmitter2 {
     disconnect() {
         this.send('exit');
 
-        if (this.socket) {
-            this.socket.end();
-            this.socket = null;
-        }
+        this.resetSocket();
     }
 
     /*********************
@@ -786,6 +793,8 @@ export class Connection extends EventEmitter2 {
     //called on socket/generic error, simply echo the error
     //to the user
     _onError(err: Error) {
+        this.connecting = false;
+        this.resetSocket();
         this.emit('error', err);
     }
 
@@ -864,9 +873,9 @@ export class Connection extends EventEmitter2 {
 }
 
 export interface InboundSocketConfig {
-    host: string; 
-    port: number; 
-    password: string; 
+    host: string;
+    port: number;
+    password: string;
     callback?: () => any;
 }
 

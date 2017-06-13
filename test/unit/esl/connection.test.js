@@ -1,11 +1,11 @@
-var data = require('../../fixtures/data'),
+let data = require('../../fixtures/data'),
     heads = JSON.parse(data.event.json),
     macros = require('../../fixtures/macros'),
     Connection = require('../../../__build__/src').Connection;
 
 describe('esl.Connection', function() {
     describe('Outbound Connection', function() {
-        var serverSocket, conn;
+        let serverSocket, conn;
 
         before(function(done) {
             macros.getEchoServerSocket(function(err, client, server) {
@@ -37,7 +37,7 @@ describe('esl.Connection', function() {
     });
 
     describe('Inbound Connection', function() {
-        var serverSocket, conn;
+        let serverSocket, conn;
 
         before(function(done) {
             macros.getEchoServerSocket(function(err, client, server) {
@@ -105,7 +105,7 @@ describe('esl.Connection', function() {
         });
 
         describe('.execute()', function() {
-            var uuid = 'f6a2ae66-2a0d-4ede-87ae-1da2ef25ada5',
+            let uuid = 'f6a2ae66-2a0d-4ede-87ae-1da2ef25ada5',
                 uuid2 = 'a5eac28e-b623-463d-87ad-b9de90afaf33';
 
             it('should invoke the callback', function(done) {
@@ -136,7 +136,7 @@ describe('esl.Connection', function() {
             topic: function() { return null; },
             'should call callback': {
                 topic: macros.getInboundConnection(Connection, function(o) {
-                    var t = this;
+                    let t = this;
                     o.conn.sendRecv('auth poopy', function(evt) {
                         t.callback(o, evt);
                     });
@@ -152,7 +152,7 @@ describe('esl.Connection', function() {
             },
             'should fire esl::event::command::reply': {
                 topic: macros.getInboundConnection(Connection, function(o) {
-                    var t = this;
+                    let t = this;
                     o.conn.sendRecv('auth poopy');
                     o.conn.socket.once('data', function() {
                         o.conn.socket.write(data.event.cmdReply('accepted'));
@@ -230,7 +230,7 @@ function testConnectionSend(done, conn, args, expected) {
 
 function sendChannelExecuteResponse(conn, appUuid, appName, appArg, uuid) {
     // condensed output from FreeSWITCH to test relevant parts.
-    var resp = [
+    let resp = [
         'Event-Name: CHANNEL_EXECUTE_COMPLETE',
         'Unique-ID: ' + uuid,
         'Application: ' + appName,
@@ -247,17 +247,17 @@ function sendChannelExecuteResponse(conn, appUuid, appName, appArg, uuid) {
 function testChannelExecute(conn, appName, appArg, uuid, cb) {
     conn.socket.once('data', function(data) {
         data = data.toString('utf8');
-        var lines = data.split('\n');
+        let lines = data.split('\n');
 
         expect(lines).to.contain('call-command: execute');
         expect(lines).to.contain('execute-app-name: ' + appName);
         expect(lines).to.contain('execute-app-arg: ' + appArg);
 
         // first send an unrelated message that should not be picked up.
-        var otherUuid = 'fee64ea1-c11d-4a1b-9715-b755fed7a557';
+        let otherUuid = 'fee64ea1-c11d-4a1b-9715-b755fed7a557';
         sendChannelExecuteResponse(conn, otherUuid, 'sleep', '1', uuid);
 
-        var appUuid = /\nEvent-UUID: ([0-9a-f-]+)\n/.exec(data)[1];
+        let appUuid = /\nEvent-UUID: ([0-9a-f-]+)\n/.exec(data)[1];
         sendChannelExecuteResponse(conn, appUuid, appName, appArg, uuid);
     });
 
