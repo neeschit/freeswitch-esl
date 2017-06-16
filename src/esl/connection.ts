@@ -1,5 +1,4 @@
-const xml2js = require('xml2js'),
-    generateUuid = require('uuid');
+const xml2js = require('xml2js');
 
 import { esl } from "./esl";
 import { Event } from "./event";
@@ -7,6 +6,7 @@ import { Parser } from "./parser";
 import * as net from 'net';
 import * as crypto from 'crypto';
 import { EventEmitter2 } from 'eventemitter2';
+import { v4 } from 'uuid';
 
 //- function(host, port, password)
 //Initializes a new instance of ESLconnection, and connects to the
@@ -283,49 +283,23 @@ export class Connection extends EventEmitter2 {
     // the command has been executed.
     //
     //api($command, $args) is identical to sendRecv("api $command $args").
-    api(command: string, args?: any, cb?: () => any) {
-        if (typeof args === 'function') {
-            cb = args;
-            args = '';
-        }
-
-        if (args instanceof Array)
-            args = args.join(' ');
-
-        args = (args ? ' ' + args : '');
+    api(command: string, args: string[], cb?: (event: Event) => any) {
+        const commandArguments = args && args.join(' ');
 
         //queue callback for api response
         this.apiCallbackQueue.push(cb);
 
-        this.send('api ' + command + args);
+        this.send('api ' + command + commandArguments);
     }
 
     //Send a background API command to the FreeSWITCH server to be executed in
     // it's own thread. This will be executed in it's own thread, and is non-blocking.
     //
     //bgapi($command, $args) is identical to sendRecv("bgapi $command $args")
-    bgapi(command: string, args?: any, jobid?: any, cb?: () => any) {
-        if (typeof args === 'function') {
-            cb = args;
-            args = '';
-            jobid = null;
-        }
-
-        if (typeof jobid === 'function') {
-            cb = jobid;
-            jobid = null;
-        }
-
-        args = args || ''; //incase they pass null/false
-
-        if (args instanceof Array)
-            args = args.join(' ');
-
-        args = ' ' + args;
-
-        jobid = jobid || generateUuid.v4();
-
+    bgapi(command: string, args: string[], cb?: (event: Event) => any, jobid?: string) {
         const self = this;
+        jobid = jobid || v4();
+        
         let params: { [key: string]: any } = {},
             addToFilter = (cb?: () => any) => {
                 if (!cb) {
@@ -502,7 +476,7 @@ export class Connection extends EventEmitter2 {
         //if inbound
         if (self._inbound) {
             //if no uuid passed, create one
-            uuid = uuid || generateUuid.v4();
+            uuid = uuid || v4();
 
             //execute with the new uuid
             eventUuid = self._doExec(uuid, 'execute', opts, cb);
@@ -619,7 +593,7 @@ export class Connection extends EventEmitter2 {
 
         format = format || 'json';
 
-        this.bgapi('show ' + item + ' as ' + format, function (eventResponse: Event) {
+        this.bgapi('show', [item, 'as', format], function (eventResponse: Event) {
             const data = eventResponse.getBody();
             let parsed: any = {};
 
@@ -708,9 +682,9 @@ export class Connection extends EventEmitter2 {
             (options.app ? ' &' + options.app : '');
 
         if (options.sync) {
-            this.api('originate', arg, cb);
+            this.api('originate', [arg], cb);
         } else {
-            this.bgapi('originate', arg, cb);
+            this.bgapi('originate', [arg], cb);
         }
     }
 
@@ -770,7 +744,7 @@ export class Connection extends EventEmitter2 {
 
         //this method of event tracking is based on:
         //http://lists.freeswitch.org/pipermail/freeswitch-users/2013-May/095329.html
-        args['Event-UUID'] = generateUuid.v4();
+        args['Event-UUID'] = v4();
 
         const eventName = 'esl::event::CHANNEL_EXECUTE_COMPLETE::' + uuid;
         const self = this;

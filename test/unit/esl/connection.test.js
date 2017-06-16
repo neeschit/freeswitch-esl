@@ -73,7 +73,7 @@ describe('esl.Connection', function() {
         });
 
         describe('.connected()', function() {
-            it('should be false', function() {
+            it('should be true', function() {
                 expect(conn.connected()).to.equal(true);
             });
         });
