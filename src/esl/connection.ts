@@ -283,23 +283,23 @@ export class Connection extends EventEmitter2 {
     // the command has been executed.
     //
     //api($command, $args) is identical to sendRecv("api $command $args").
-    api(command: string, args: string[], cb?: (event: Event) => any) {
-        const commandArguments = args && args.join(' ');
-
+    api(command: string, commandArguments: string, cb?: (event: Event) => any) {
+        commandArguments = commandArguments || '';
         //queue callback for api response
         this.apiCallbackQueue.push(cb);
 
-        this.send('api ' + command + commandArguments);
+        this.send('api ' + command + ' ' + commandArguments);
     }
 
     //Send a background API command to the FreeSWITCH server to be executed in
     // it's own thread. This will be executed in it's own thread, and is non-blocking.
     //
     //bgapi($command, $args) is identical to sendRecv("bgapi $command $args")
-    bgapi(command: string, args: string[], cb?: (event: Event) => any, jobid?: string) {
+    bgapi(command: string, commandArguments: string, cb?: (event: Event) => any, jobid?: string) {
+        commandArguments = commandArguments || '';
         const self = this;
         jobid = jobid || v4();
-        
+
         let params: { [key: string]: any } = {},
             addToFilter = (cb?: () => any) => {
                 if (!cb) {
@@ -321,7 +321,7 @@ export class Connection extends EventEmitter2 {
                     } else {
                         removeFromFilter();
                     }
-                    self.sendRecv('bgapi ' + command + args, params);
+                    self.sendRecv('bgapi ' + command + ' ' + commandArguments, params);
                 });
             };
 
@@ -593,7 +593,7 @@ export class Connection extends EventEmitter2 {
 
         format = format || 'json';
 
-        this.bgapi('show', [item, 'as', format], function (eventResponse: Event) {
+        this.bgapi('show', [item, 'as', format].join(' '), function (eventResponse: Event) {
             const data = eventResponse.getBody();
             let parsed: any = {};
 
@@ -682,9 +682,9 @@ export class Connection extends EventEmitter2 {
             (options.app ? ' &' + options.app : '');
 
         if (options.sync) {
-            this.api('originate', [arg], cb);
+            this.api('originate', arg, cb);
         } else {
-            this.bgapi('originate', [arg], cb);
+            this.bgapi('originate', arg, cb);
         }
     }
 
