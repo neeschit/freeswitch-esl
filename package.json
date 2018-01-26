@@ -1,45 +1,45 @@
 {
-  "name": "freeswitch-esl",
-  "version": "1.0.4",
-  "description": "FreeSWITCH ESL Node.js Implementation",
-  "author": "Chad Engler <chad@pantherdev.com>",
-  "keywords": [
-    "freeswitch",
-    "api",
-    "typescript",
-    "esl",
-    "event",
-    "socket",
-    "library"
-  ],
-  "pancli": {},
-  "main": "__build__/src/index",
-  "typings": "__build__/src/index.d.ts",
-  "homepage": "https://github.com/englercj/node-esl",
-  "bugs": "https://github.com/englercj/node-esl/issues",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/englercj/node-esl.git"
-  },
-  "dependencies": {
-    "eventemitter2": "4.1.0",
-    "uuid": "3.0.1",
-    "xml2js": "0.4.17"
-  },
-  "devDependencies": {
-    "@types/eventemitter2": "2.2.1",
-    "@types/node": "^7.0.29",
-    "@types/uuid": "^3.0.0",
-    "chai": "4.0.2",
-    "mocha": "2.5.3",
-    "sinon": "2.3.2",
-    "sinon-chai": "2.10.0"
-  },
-  "scripts": {
-    "test": "mocha --recursive ./test/",
-    "test:watch": "mocha --recursive --watch ./test/"
-  },
-  "engines": {
-    "node": ">= 6.9.0"
-  }
+    "name": "freeswitch-esl",
+    "version": "1.0.4",
+    "description": "FreeSWITCH ESL Node.js typescript Implementation",
+    "author": "Nischit Ranganath<nischit14@gmail.com>",
+    "keywords": [
+        "freeswitch",
+        "api",
+        "typescript",
+        "esl",
+        "event",
+        "socket",
+        "library"
+    ],
+    "pancli": {},
+    "main": "__build__/src/index",
+    "typings": "__build__/src/index.d.ts",
+    "homepage": "https://github.com/neeschit/freeswitch-esl",
+    "bugs": "https://github.com/neeschit/freeswitch-esl/issues",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/neeschit/freeswitch-esl.git"
+    },
+    "dependencies": {
+        "eventemitter2": "4.1.0",
+        "uuid": "3.0.1",
+        "xml2js": "0.4.17"
+    },
+    "devDependencies": {
+        "@types/eventemitter2": "2.2.1",
+        "@types/node": "^7.0.29",
+        "@types/uuid": "^3.0.0",
+        "chai": "4.0.2",
+        "mocha": "2.5.3",
+        "sinon": "2.3.2",
+        "sinon-chai": "2.10.0"
+    },
+    "scripts": {
+        "test": "mocha --recursive ./test/",
+        "test:watch": "mocha --recursive --watch ./test/"
+    },
+    "engines": {
+        "node": ">= 6.9.0"
+    }
 }
