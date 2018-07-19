@@ -1,0 +1,31 @@
+version: 2
+jobs:
+  build:
+    working_directory: ~/neeschit/freeswitch-esl
+    parallelism: 1
+    shell: /bin/bash --login
+    environment:
+      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
+      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
+    docker:
+      - image: circleci/node:10-jessie-browsers
+    steps:
+      - checkout
+      - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+      - restore_cache:
+        keys:
+        # This branch if available
+        - v1-dep-{{ .Branch }}-
+        # Default branch if not
+        - v1-dep-master-
+      - run: echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+      - run: sudo npm i -g typescript
+      - run: sudo npm install -g mocha
+      - run: export PATH="~/neeschit/freeswitch-esl/node_modules/.bin:$PATH"
+      - run: npm i && tsc && npm test
+      - store_test_results:
+        path: ~/neeschit/freeswitch-esl/test-results.xml
+      - save_cache:
+        key: v1-dep-{{ .Branch }}-{{ epoch }}
+        paths:
+        - ~/neeschit/freeswitch-esl/node_modules

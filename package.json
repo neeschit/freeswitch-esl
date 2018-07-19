@@ -23,16 +23,17 @@
     },
     "dependencies": {
         "eventemitter2": "4.1.0",
-        "uuid": "3.0.1",
+        "uuid": "3.1.0",
         "xml2js": "0.4.17"
     },
     "devDependencies": {
         "@types/eventemitter2": "2.2.1",
-        "@types/node": "^7.0.29",
-        "@types/uuid": "^3.0.0",
-        "chai": "4.0.2",
-        "mocha": "2.5.3",
-        "sinon": "2.3.2",
+        "@types/node": "8.5.2",
+        "@types/uuid": "3.4.0",
+        "chai": "4.1.2",
+        "mocha": "4.0.1",
+        "mocha-junit-reporter": "^1.17.0",
+        "sinon": "2.3.8",
         "sinon-chai": "2.10.0"
     },
     "scripts": {
@@ -40,6 +41,7 @@
         "test:watch": "mocha --recursive --watch ./test/"
     },
     "engines": {
-        "node": ">= 6.9.0"
-    }
+        "node": ">= 8.0.0"
+    },
+    "peerDependencies": {}
 }

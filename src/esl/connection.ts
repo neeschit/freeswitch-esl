@@ -1,8 +1,8 @@
 const xml2js = require('xml2js');
 
-import { esl } from "./esl";
-import { Event } from "./event";
-import { Parser } from "./parser";
+import { esl } from './esl';
+import { Event } from './event';
+import { Parser } from './parser';
 import * as net from 'net';
 import * as crypto from 'crypto';
 import { EventEmitter2 } from 'eventemitter2';
@@ -36,7 +36,6 @@ import { v4 } from 'uuid';
 //  ctor option will take in a net.Socket instance (gained from net.connect or
 //  on a server's connection event). For multiple connections use esl.Server
 export class Connection extends EventEmitter2 {
-
     _id: string;
     execAsync: boolean;
     execLock: boolean;
@@ -63,7 +62,7 @@ export class Connection extends EventEmitter2 {
         });
     }
 
-    initializeInbound(config: InboundSocketConfig) {
+    initializeInbound(config: InboundSocketConfig, testParam?: any) {
         if (!config.host || !config.password) {
             this.emit('error', new Error('Bad arguments passed to esl.Connection'));
         }
@@ -99,8 +98,8 @@ export class Connection extends EventEmitter2 {
 
         this.send('connect');
 
-        this.once('esl::event::CHANNEL_DATA::**', function () {
-            self.subscribe(self.reqEvents, function () {
+        this.once('esl::event::CHANNEL_DATA::**', function() {
+            self.subscribe(self.reqEvents, function() {
                 self.emit('esl::ready');
             });
         });
@@ -136,43 +135,47 @@ export class Connection extends EventEmitter2 {
         this.socket.on('error', this._onError.bind(this));
 
         //emit end when stream closes
-        this.socket.on('end', function () {
+        this.socket.on('end', function() {
             self.emit('esl::end');
             self.socket = null;
         });
 
         //handle logdata events
-        this.on('esl::event::logdata', function (log: Event) {
+        this.on('esl::event::logdata', function(log: Event) {
             esl._doLog(log);
         });
 
         //handle command reply callbacks
-        this.on('esl::event::command::reply', function () {
+        this.on('esl::event::command::reply', function() {
             if (self.cmdCallbackQueue.length === 0) return;
 
             const fn = self.cmdCallbackQueue.shift();
 
-            if (fn && typeof fn === 'function')
-                fn.apply(self, arguments);
+            if (fn && typeof fn === 'function') fn.apply(self, arguments);
         });
 
         //handle api response callbacks
-        this.on('esl::event::api::response', function () {
+        this.on('esl::event::api::response', function() {
             if (self.apiCallbackQueue.length === 0) return;
 
             const fn = self.apiCallbackQueue.shift();
 
-            if (fn && typeof fn === 'function')
-                fn.apply(self, arguments);
+            if (fn && typeof fn === 'function') fn.apply(self, arguments);
         });
     }
 
     private createInboundSocket() {
+        if (this.socket) {
+            this.disconnect();
+        }
         //connect to ESL Socket
-        this.socket = net.connect({
-            port: this.port,
-            host: this.host
-        }, this._onConnect.bind(this));
+        this.socket = net.connect(
+            {
+                port: this.port,
+                host: this.host
+            },
+            this._onConnect.bind(this)
+        );
 
         this.onInit();
     }
@@ -182,7 +185,7 @@ export class Connection extends EventEmitter2 {
             return;
         }
         if (!this._inbound) {
-            throw new Error('cannot reconnect on outbound sockets as connection is initiated from freeswitch')
+            throw new Error('cannot reconnect on outbound sockets as connection is initiated from freeswitch');
         }
 
         this.init(callback);
@@ -213,7 +216,7 @@ export class Connection extends EventEmitter2 {
 
     //Test if the connection object is connected. Returns `true` if connected, `false` otherwise.
     connected() {
-        return (!this.connecting && !!this.socket && !this.socket.destroyed);
+        return !this.connecting && !!this.socket && !this.socket.destroyed;
     }
 
     //When FS connects to an "Event Socket Outbound" handler, it sends
@@ -243,13 +246,12 @@ export class Connection extends EventEmitter2 {
         try {
             self.socket.write(command + '\n');
             if (args) {
-                Object.keys(args).forEach(function (key) {
+                Object.keys(args).forEach(function(key) {
                     self.socket.write(key + ': ' + args[key] + '\n');
                 });
             }
             self.socket.write('\n');
-        }
-        catch (e) {
+        } catch (e) {
             self.emit('error', e);
         }
     }
@@ -311,10 +313,10 @@ export class Connection extends EventEmitter2 {
             sendApiCommand = (cb?: (...args: any[]) => any) => {
                 params['Job-UUID'] = jobid;
 
-                addToFilter(function () {
+                addToFilter(function() {
                     if (cb) {
-                        self.once('esl::event::BACKGROUND_JOB::' + jobid, function (evt: Event) {
-                            removeFromFilter(function () {
+                        self.once('esl::event::BACKGROUND_JOB::' + jobid, function(evt: Event) {
+                            removeFromFilter(function() {
                                 cb(evt);
                             });
                         });
@@ -326,17 +328,15 @@ export class Connection extends EventEmitter2 {
             };
 
         if (self.usingFilters) {
-
-            addToFilter = (cb) => {
+            addToFilter = cb => {
                 self.filter('Job-UUID', jobid, cb);
             };
-            removeFromFilter = (cb) => {
+            removeFromFilter = cb => {
                 self.filterDelete('Job-UUID', jobid, cb);
             };
 
             sendApiCommand(cb);
-        }
-        else {
+        } else {
             sendApiCommand(cb);
         }
     }
@@ -379,7 +379,7 @@ export class Connection extends EventEmitter2 {
             cb(event);
         };
 
-        const timeout = setTimeout(function () {
+        const timeout = setTimeout(function() {
             self.removeListener('esl::event::**', fn);
             if (cb) cb();
         }, ms);
@@ -408,8 +408,7 @@ export class Connection extends EventEmitter2 {
     //
     //See the event socket event command for more info (http://wiki.freeswitch.org/wiki/Event_Socket#event).
     events(type: string, events?: any, cb?: any) {
-        if (['plain', 'xml', 'json'].indexOf(type) === -1)
-            type = 'plain';
+        if (['plain', 'xml', 'json'].indexOf(type) === -1) type = 'plain';
 
         if (typeof events === 'function') {
             cb = events;
@@ -419,24 +418,20 @@ export class Connection extends EventEmitter2 {
         events = events || 'all';
 
         let all = false;
-        if (events instanceof Array)
-            all = (events.length === 1 && events[0].toLowerCase() === 'all');
-        else
-            all = (events.toLowerCase() === 'all');
+        if (events instanceof Array) all = events.length === 1 && events[0].toLowerCase() === 'all';
+        else all = events.toLowerCase() === 'all';
 
         //if we specify all that includes required events
         if (all) {
             this.listeningEvents = ['all'];
-        }
-        //otherwise we need to concat the events to the required events
-        else {
+        } else {
+            //otherwise we need to concat the events to the required events
             //set listeningEvents to the new events
-            this.listeningEvents = (events instanceof Array ? events : events.split(' '));
+            this.listeningEvents = events instanceof Array ? events : events.split(' ');
 
             //if the required events are not in there, add them
             for (let i = 0, len = this.reqEvents.length; i < len; ++i) {
-                if (this.listeningEvents.indexOf(this.reqEvents[i]) !== -1)
-                    continue;
+                if (this.listeningEvents.indexOf(this.reqEvents[i]) !== -1) continue;
 
                 this.listeningEvents.push(this.reqEvents[i]);
             }
@@ -456,7 +451,8 @@ export class Connection extends EventEmitter2 {
     // response. The server's response will contain "+OK [Success Message]" on success
     // or "-ERR [Error Message]" on failure.
     execute(app: string, arg?: any, uuid?: string, cb?: Function) {
-        const self = this, opts: { [key: string]: string } = {};
+        const self = this,
+            opts: { [key: string]: string } = {};
 
         if (typeof arg === 'function') {
             cb = arg;
@@ -480,9 +476,8 @@ export class Connection extends EventEmitter2 {
 
             //execute with the new uuid
             eventUuid = self._doExec(uuid, 'execute', opts, cb);
-        }
-        //if outbound
-        else {
+        } else {
+            //if outbound
             //grab our unique-id from channel_data
             uuid = self.getInfo().getHeader('Unique-ID');
             eventUuid = self._doExec(uuid, 'execute', opts, cb);
@@ -557,7 +552,7 @@ export class Connection extends EventEmitter2 {
         const self = this;
 
         //send auth command
-        self.sendRecv('auth ' + self.password, function (evt: Event) {
+        self.sendRecv('auth ' + self.password, function(evt: Event) {
             if (evt.getHeader('Modesl-Reply-OK') === 'accepted') {
                 self.authed = true;
 
@@ -593,7 +588,7 @@ export class Connection extends EventEmitter2 {
 
         format = format || 'json';
 
-        this.bgapi('show', [item, 'as', format].join(' '), function (eventResponse: Event) {
+        this.bgapi('show', [item, 'as', format].join(' '), function(eventResponse: Event) {
             const data = eventResponse.getBody();
             let parsed: any = {};
 
@@ -606,18 +601,29 @@ export class Connection extends EventEmitter2 {
             //otherwise parse the event
             switch (format) {
                 case 'json': //json format, easy and efficient
-                    try { parsed = JSON.parse(data); }
-                    catch (e) { if (cb) cb(e); return; }
+                    try {
+                        parsed = JSON.parse(data);
+                    } catch (e) {
+                        if (cb) cb(e);
+                        return;
+                    }
 
                     if (!parsed.rows) parsed.rows = [];
 
                     break;
 
                 case 'xml': //xml format, need to massage a bit after parsing
-                    const parser = new xml2js.Parser({ explicitArray: false, explicitRoot: false, emptyTag: '' });
+                    const parser = new xml2js.Parser({
+                        explicitArray: false,
+                        explicitRoot: false,
+                        emptyTag: ''
+                    });
 
-                    parser.parseString(data, function (err: Error, doc: any) {
-                        if (err) { if (cb) cb(err); return; }
+                    parser.parseString(data, function(err: Error, doc: any) {
+                        if (err) {
+                            if (cb) cb(err);
+                            return;
+                        }
                         // jshint -W106
                         parsed.rowCount = parseInt(doc.$.row_count, 10);
                         // jshint +W106
@@ -628,7 +634,7 @@ export class Connection extends EventEmitter2 {
                             delete doc.row.$;
                             parsed.rows.push(doc.row);
                         } else if (parsed.rowCount > 1) {
-                            doc.row.forEach(function (row: any) {
+                            doc.row.forEach(function(row: any) {
                                 delete row.$;
                                 parsed.rows.push(row);
                             });
@@ -636,7 +642,8 @@ export class Connection extends EventEmitter2 {
                     });
                     break;
 
-                default: //delim seperated values, custom parsing
+                default:
+                    //delim seperated values, custom parsing
                     if (format.indexOf('delim')) {
                         const delim = format.replace('delim ', ''),
                             lines = data.split('\n'),
@@ -676,9 +683,13 @@ export class Connection extends EventEmitter2 {
         options.app = options.app || '';
         options.sync = options.sync || false;
 
-        const arg = 'sofia/' + options.profile +
-            '/' + options.number +
-            '@' + options.gateway +
+        const arg =
+            'sofia/' +
+            options.profile +
+            '/' +
+            options.number +
+            '@' +
+            options.gateway +
             (options.app ? ' &' + options.app : '');
 
         if (options.sync) {
@@ -728,12 +739,11 @@ export class Connection extends EventEmitter2 {
         this.sendEvent(event, cb);
     }
 
-
     /*********************
      ** Private helpers
      **********************/
     //noop because EventEmitter2 makes me pass a function
-    _noop() { }
+    _noop() {}
 
     //helper for execute, sends the actual message
     _doExec(uuid: string, cmd: string, args: any, cb?: Function) {
@@ -772,7 +782,6 @@ export class Connection extends EventEmitter2 {
         this.emit('error', err);
     }
 
-
     //called when socket connects to FSW ESL Server
     //or when we successfully listen to the fd
     _onConnect() {
@@ -791,8 +800,7 @@ export class Connection extends EventEmitter2 {
 
         //wait for auth request
         this.on('esl::event::auth::request', this.auth.bind(this));
-
-    };
+    }
 
     //When we get a generic ESLevent from FSW
     _onEvent(event: Event, headers: any, body: string) {
@@ -830,7 +838,6 @@ export class Connection extends EventEmitter2 {
                 emit += '::api::response';
                 break;
 
-
             case 'text/event-json':
             case 'text/event-plain':
             case 'text/event-xml':
@@ -843,7 +850,6 @@ export class Connection extends EventEmitter2 {
 
         this.emit(emit, event, headers, body);
     }
-
 }
 
 export interface InboundSocketConfig {

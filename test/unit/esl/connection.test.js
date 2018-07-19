@@ -9,7 +9,7 @@ describe('esl.Connection', function() {
 
         before(function(done) {
             macros.getEchoServerSocket(function(err, client, server) {
-                if(err) return done(err);
+                if (err) return done(err);
 
                 serverSocket = server;
                 conn = new Connection();
@@ -41,15 +41,15 @@ describe('esl.Connection', function() {
 
         before(function(done) {
             macros.getEchoServerSocket(function(err, client, server) {
-                if(err) return done(err);
+                if (err) return done(err);
 
                 serverSocket = server;
                 // no need for the given client, we will set up a new one below.
                 client.end();
                 conn = new Connection();
                 conn.initializeInbound({
-                    host: 'localhost', 
-                    port: server.address().port, 
+                    host: 'localhost',
+                    port: server.address().port,
                     password: 'ClueCon'
                 });
                 done();
@@ -95,12 +95,7 @@ describe('esl.Connection', function() {
             });
 
             it('should write the correct data with one arg', function(done) {
-                testConnectionSend(
-                    done,
-                    conn,
-                    ['send me'],
-                    'send me\n\n'
-                );
+                testConnectionSend(done, conn, ['send me'], 'send me\n\n');
             });
         });
 
@@ -128,46 +123,14 @@ describe('esl.Connection', function() {
                     done();
                 });
             });
-
         });
 
-        /*,
-        '.sendRecv()': {
-            topic: function() { return null; },
-            'should call callback': {
-                topic: macros.getInboundConnection(Connection, function(o) {
-                    let t = this;
-                    o.conn.sendRecv('auth poopy', function(evt) {
-                        t.callback(o, evt);
-                    });
-
-                    o.conn.socket.once('data', function() {
-                        o.conn.socket.write(data.event.cmdReply('accepted'));
-                    });
-                }),
-                'on command': function(o, evt) {
-                    assert.equal(evt.getHeader('Reply-Text'), '+OK accepted');
-                    assert.equal(evt.getHeader('Modesl-Reply-OK'), 'accepted');
-                }
-            },
-            'should fire esl::event::command::reply': {
-                topic: macros.getInboundConnection(Connection, function(o) {
-                    let t = this;
-                    o.conn.sendRecv('auth poopy');
-                    o.conn.socket.once('data', function() {
-                        o.conn.socket.write(data.event.cmdReply('accepted'));
-                    });
-
-                    o.conn.on('esl::event::command::reply', function(evt) {
-                        t.callback(o, evt);
-                    });
-                }),
-                'on command': function(o, evt) {
-                    assert.equal(evt.getHeader('Reply-Text'), '+OK accepted');
-                    assert.equal(evt.getHeader('Modesl-Reply-OK'), 'accepted');
-                }
-            }
-        }*/
+        /*         describe.only('.reconnect()', function() {
+            it('should remove all existing listeners on reconnect', done => {
+                const onConnectCallback1 = 
+                conn.reconnect()
+            });
+        }); */
 
         after(function() {
             conn.disconnect();
@@ -237,7 +200,7 @@ function sendChannelExecuteResponse(conn, appUuid, appName, appArg, uuid) {
         'Application-Response: _none_',
         'Application-UUID: ' + appUuid,
         '',
-        '',
+        ''
     ].join('\n');
     conn.socket.write('Content-Type: text/event-plain\n');
     conn.socket.write('Content-Length: ' + resp.length + '\n\n');
