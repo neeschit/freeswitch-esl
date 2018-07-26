@@ -1,6 +1,6 @@
 {
     "name": "freeswitch-esl",
-    "version": "1.0.4",
+    "version": "2.0.0",
     "description": "FreeSWITCH ESL Node.js typescript Implementation",
     "author": "Nischit Ranganath<nischit14@gmail.com>",
     "keywords": [
