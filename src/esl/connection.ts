@@ -94,7 +94,7 @@ export class Connection extends EventEmitter2 {
 
         this.socket = config.socket;
         this.connecting = false;
-        this._onConnect();
+        this._onConnect(false);
 
         this.send('connect');
 
@@ -106,13 +106,13 @@ export class Connection extends EventEmitter2 {
 
         this.socket.on('error', this._onError.bind(this));
 
-        this.onInit();
+        this.onInit(false);
     }
 
-    private init(callback?: () => any) {
+    private init(callback?: () => any, isReconnect?: boolean) {
         //check if they passed a ready callback
-        if (callback && typeof callback === 'function') {
-            this.once('esl::ready', callback);
+        if (!isReconnect && callback && typeof callback === 'function') {
+            this.on('esl::ready', callback);
         }
 
         //reasonable defaults for values
@@ -129,7 +129,7 @@ export class Connection extends EventEmitter2 {
         this.listeningEvents = [];
     }
 
-    private onInit() {
+    private onInit(isReconnect: boolean) {
         const self = this;
 
         this.socket.on('error', this._onError.bind(this));
@@ -139,6 +139,10 @@ export class Connection extends EventEmitter2 {
             self.emit('esl::end');
             self.socket = null;
         });
+
+        if (isReconnect) {
+            return;
+        }
 
         //handle logdata events
         this.on('esl::event::logdata', function(log: Event) {
@@ -165,7 +169,9 @@ export class Connection extends EventEmitter2 {
     }
 
     private createInboundSocket() {
+        const isReconnect = !!this.socket;
         if (this.socket) {
+            this.socket.removeAllListeners;
             this.disconnect();
         }
         //connect to ESL Socket
@@ -174,10 +180,10 @@ export class Connection extends EventEmitter2 {
                 port: this.port,
                 host: this.host
             },
-            this._onConnect.bind(this)
+            this._onConnect.bind(this, isReconnect)
         );
 
-        this.onInit();
+        this.onInit(isReconnect);
     }
 
     reconnect(callback?: () => any) {
@@ -188,15 +194,17 @@ export class Connection extends EventEmitter2 {
             throw new Error('cannot reconnect on outbound sockets as connection is initiated from freeswitch');
         }
 
-        this.init(callback);
+        this.socket && this.socket.removeAllListeners();
+        this.parser && this.parser.removeAllListeners();
+
+        this.init(callback, true);
 
         this.createInboundSocket();
     }
 
     private resetSocket() {
-        if (this.socket) {
+        if (this.socket && !this.socket.destroyed) {
             this.socket.end();
-            this.socket = null;
         }
     }
 
@@ -539,6 +547,9 @@ export class Connection extends EventEmitter2 {
 
     //Close the socket connection to the FreeSWITCH server.
     disconnect() {
+        if (this.socket && this.socket.destroyed) {
+            return;
+        }
         this.send('exit');
 
         this.resetSocket();
@@ -784,7 +795,7 @@ export class Connection extends EventEmitter2 {
 
     //called when socket connects to FSW ESL Server
     //or when we successfully listen to the fd
-    _onConnect() {
+    _onConnect(isReconnect: boolean) {
         //initialize parser
         this.parser = new Parser(this.socket);
 
@@ -797,6 +808,10 @@ export class Connection extends EventEmitter2 {
         //emit that we conencted
         this.emit('esl::connect');
         this.connecting = false;
+
+        if (isReconnect) {
+            return;
+        }
 
         //wait for auth request
         this.on('esl::event::auth::request', this.auth.bind(this));
